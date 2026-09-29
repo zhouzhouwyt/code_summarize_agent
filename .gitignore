@@ -79,3 +79,19 @@ temp/
 
 # Generated project Wiki exports (canonical data lives in the shared database)
 .repository-wiki/
+
+
+# 带点的 Python 虚拟环境
+.venv/
+
+# 环境变量文件，保留示例配置
+.env.*
+!.env.example
+
+# 工具缓存
+.mypy_cache/
+.ruff_cache/
+.coverage.*
+
+# 自动生成的基准测试结果（如果此目录存放的是测试结果）
+/.benchmarks/
