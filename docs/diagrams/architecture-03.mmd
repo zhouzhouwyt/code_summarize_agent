@@ -1,0 +1,13 @@
+flowchart TD
+  start([子图 START]) --> sup[supervisor<br/>模型规划、选择工具<br/>research_iterations 加一]
+  sup -.-> tools[supervisor_tools<br/>先检查退出条件]
+  tools -.->|超过监督轮数、无工具调用、ResearchComplete| done([子图 END<br/>输出 notes 和 research_status])
+  tools -.->|调度异常| done
+  tools -->|未退出：处理本轮工具| think[记录 think_tool 内容]
+  think --> fanout[ConductResearch<br/>限制并发数量]
+  fanout -->|ainvoke + asyncio.gather| r1[Researcher 子图：任务 A]
+  fanout -->|ainvoke + asyncio.gather| r2[Researcher 子图：任务 B]
+  r1 --> collect[汇总 research_results / ToolMessage / raw_notes]
+  r2 --> collect
+  fanout -->|无研究任务，仅思考| collect
+  collect -.-> sup

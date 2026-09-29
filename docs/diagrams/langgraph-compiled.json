@@ -1,0 +1,345 @@
+{
+  "langgraph-main": {
+    "nodes": [
+      {
+        "id": "__start__",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "__start__"
+        }
+      },
+      {
+        "id": "validate_repository",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "validate_repository"
+        }
+      },
+      {
+        "id": "clarify_with_user",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "clarify_with_user"
+        }
+      },
+      {
+        "id": "write_research_brief",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "write_research_brief"
+        }
+      },
+      {
+        "id": "prepare_repository_context",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "prepare_repository_context"
+        }
+      },
+      {
+        "id": "retrieve_research_history",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "retrieve_research_history"
+        }
+      },
+      {
+        "id": "route_after_history",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "route_after_history"
+        }
+      },
+      {
+        "id": "research_supervisor",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "graph",
+            "state",
+            "CompiledStateGraph"
+          ],
+          "name": "research_supervisor"
+        }
+      },
+      {
+        "id": "final_report_generation",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "final_report_generation"
+        }
+      },
+      {
+        "id": "save_research_history",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "save_research_history"
+        }
+      },
+      {
+        "id": "__end__"
+      }
+    ],
+    "edges": [
+      {
+        "source": "__start__",
+        "target": "validate_repository"
+      },
+      {
+        "source": "clarify_with_user",
+        "target": "__end__",
+        "conditional": true
+      },
+      {
+        "source": "clarify_with_user",
+        "target": "write_research_brief",
+        "conditional": true
+      },
+      {
+        "source": "final_report_generation",
+        "target": "save_research_history"
+      },
+      {
+        "source": "prepare_repository_context",
+        "target": "retrieve_research_history"
+      },
+      {
+        "source": "research_supervisor",
+        "target": "final_report_generation"
+      },
+      {
+        "source": "retrieve_research_history",
+        "target": "route_after_history"
+      },
+      {
+        "source": "route_after_history",
+        "target": "research_supervisor"
+      },
+      {
+        "source": "validate_repository",
+        "target": "__end__",
+        "conditional": true
+      },
+      {
+        "source": "validate_repository",
+        "target": "clarify_with_user",
+        "conditional": true
+      },
+      {
+        "source": "write_research_brief",
+        "target": "prepare_repository_context",
+        "conditional": true
+      },
+      {
+        "source": "save_research_history",
+        "target": "__end__"
+      }
+    ]
+  },
+  "langgraph-supervisor": {
+    "nodes": [
+      {
+        "id": "__start__",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "__start__"
+        }
+      },
+      {
+        "id": "supervisor",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "supervisor"
+        }
+      },
+      {
+        "id": "supervisor_tools",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "supervisor_tools"
+        }
+      },
+      {
+        "id": "__end__"
+      }
+    ],
+    "edges": [
+      {
+        "source": "__start__",
+        "target": "supervisor"
+      },
+      {
+        "source": "supervisor",
+        "target": "supervisor_tools",
+        "conditional": true
+      },
+      {
+        "source": "supervisor_tools",
+        "target": "__end__",
+        "conditional": true
+      },
+      {
+        "source": "supervisor_tools",
+        "target": "supervisor",
+        "conditional": true
+      }
+    ]
+  },
+  "langgraph-researcher": {
+    "nodes": [
+      {
+        "id": "__start__",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "__start__"
+        }
+      },
+      {
+        "id": "researcher",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "researcher"
+        }
+      },
+      {
+        "id": "researcher_tools",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "researcher_tools"
+        }
+      },
+      {
+        "id": "compress_research",
+        "type": "runnable",
+        "data": {
+          "id": [
+            "langgraph",
+            "_internal",
+            "_runnable",
+            "RunnableCallable"
+          ],
+          "name": "compress_research"
+        }
+      },
+      {
+        "id": "__end__"
+      }
+    ],
+    "edges": [
+      {
+        "source": "__start__",
+        "target": "researcher"
+      },
+      {
+        "source": "researcher",
+        "target": "researcher_tools",
+        "conditional": true
+      },
+      {
+        "source": "researcher_tools",
+        "target": "compress_research",
+        "conditional": true
+      },
+      {
+        "source": "researcher_tools",
+        "target": "researcher",
+        "conditional": true
+      },
+      {
+        "source": "compress_research",
+        "target": "__end__"
+      }
+    ]
+  }
+}

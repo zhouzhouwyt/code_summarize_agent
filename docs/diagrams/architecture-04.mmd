@@ -1,0 +1,9 @@
+flowchart TD
+  start([子图 START]) --> researcher[researcher<br/>装配工具、调用模型<br/>tool_call_iterations 加一]
+  researcher -.-> tools[researcher_tools]
+  tools -.->|没有工具调用且无原生网页搜索| compress[compress_research<br/>结构化结果与证据检查]
+  tools -->|有调用或原生搜索信息| execute[函数内并发执行工具<br/>异常转为错误观察]
+  execute --> receipts[生成 ToolMessage<br/>收集带 evidence_id 的源码回执]
+  receipts -.->|ResearchComplete 或达到工具轮数预算| compress
+  receipts -.->|仍可继续| researcher
+  compress --> done([子图 END<br/>ResearcherOutputState])

@@ -1,0 +1,32 @@
+flowchart TB
+  user[用户问题和仓库路径] --> cli[cli/research.py]
+  user --> api[LangGraph API / Studio]
+  auth[security/auth.py<br/>部署鉴权与 owner 范围] -.-> api
+  cfg[configuration.py<br/>环境变量和运行参数] -.-> cli
+  cfg -.-> api
+  cli --> main[workflow/graph.py<br/>主图]
+  api --> main
+  main --> context[workflow/context.py<br/>仓库检查和上下文准备]
+  main --> sup[Supervisor 子图<br/>任务规划与调度]
+  sup -->|函数内异步调用| worker[Researcher 子图<br/>源码调查与结果压缩]
+  worker --> registry[integrations/tools.py<br/>按条件装配工具]
+  registry --> repo[repository/tools.py<br/>目录、搜索、源码与静态关系]
+  registry --> hist[history/service.py<br/>历史检索和报告分页读取]
+  registry --> wiki[wiki/tools.py<br/>模块与业务主题查询]
+  registry --> external[integrations/web_search.py + mcp.py<br/>可选外部工具]
+  models[模型服务<br/>澄清、任务整理、研究、压缩、报告] -.-> main
+  models -.-> sup
+  models -.-> worker
+  repo --> sources[项目源码和可读文本]
+  repo --> ast[repository/index.py<br/>AST 快照]
+  hist --> embed[history/embeddings.py<br/>本地问题向量]
+  hist --> db[(共享 SQLite)]
+  ast --> db
+  wiki --> db
+  indexcli[cli/index.py<br/>手动建库] --> ast
+  wikicli[cli/wiki.py<br/>手动生成] --> wikibuild[wiki/service.py<br/>代码与业务 Wiki 构建]
+  wikibuild --> ast
+  wikibuild --> business[docs/business/*.md<br/>要求、流程和计划]
+  wikibuild -.->|可选模型解释| models
+  wikibuild --> db
+  wikibuild --> exports[wiki/render.py<br/>Markdown / Mermaid / JSON]

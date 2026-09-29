@@ -1,0 +1,8 @@
+flowchart LR
+  input[AgentInputState<br/>messages] --> agent[AgentState<br/>问题、仓库、历史、研究结果、报告状态]
+  agent --> sup[SupervisorState<br/>supervisor_messages<br/>research_iterations<br/>research_results]
+  sup -->|为每个任务构造独立输入| child[ResearcherState<br/>researcher_messages<br/>source_evidence<br/>tool_call_iterations]
+  child --> output[ResearcherOutputState<br/>research_result<br/>compressed_research<br/>raw_notes]
+  output -->|逐项收集| sup
+  sup -->|公共状态通道返回| agent
+  agent --> report[final_report + messages<br/>report_succeeded<br/>history_save_status]

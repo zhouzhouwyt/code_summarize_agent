@@ -1,0 +1,10 @@
+flowchart LR
+  index[AST / Wiki 构建] --> snapshots[(repository_snapshots)]
+  snapshots --> read[源码图与 Wiki 工具]
+  question[当前问题 + brief] --> embed[本地 embedding<br/>长文本窗口向量汇总]
+  embed --> rank[按 scope / 模型身份 / 维度筛选<br/>余弦排名与可选版本筛选]
+  history[(research_history)] --> rank
+  rank --> leads[历史摘录 + 命中 ID<br/>提供给 Supervisor 和子任务]
+  report[成功生成的完整报告<br/>可带 partial 状态] --> history
+  read -.-> database[两张表位于同一个 SQLite 文件]
+  history -.-> database

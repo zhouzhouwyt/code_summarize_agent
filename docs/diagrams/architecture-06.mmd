@@ -1,0 +1,17 @@
+flowchart TD
+  ci[cli/index] --> scan[扫描 Python 源码]
+  cw[cli/wiki] --> docs[读取仓库内业务 Markdown]
+  cw --> scan
+  scan --> ast[AST<br/>模块、类、函数、方法<br/>包含、导入、调用、继承]
+  ast --> snapshot[repository_snapshots.data<br/>版本化源码快照]
+  ast --> graph[wiki/graph.py<br/>模块依赖与源码证据]
+  docs --> topics[wiki/business.py<br/>H2 主题与声明元数据]
+  topics --> links[关联业务要求、计划、代码和测试<br/>缺失和歧义保留标记]
+  graph --> links
+  links --> static[静态 Wiki<br/>主题、关系、引用]
+  static -.->|可选模型模式| llm[模块解释与业务差异分析<br/>双来源引用检查]
+  llm --> version[复查源码及文档版本]
+  static -->|no-llm| version
+  version --> persist[原快照内 wiki 字段<br/>没有新增业务表]
+  persist --> export[Markdown 模块页与业务页<br/>Mermaid 关系图 + graph.json]
+  persist --> runtime[研究时按需读取<br/>过期则不装配 Wiki 工具]

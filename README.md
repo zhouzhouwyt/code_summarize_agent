@@ -1,149 +1,124 @@
-# 🔬 Open Deep Research
+# Code Research Agent
 
-<img width="1388" height="298" alt="full_diagram" src="https://github.com/user-attachments/assets/12a2371b-8be2-4219-9b48-90503eb43c69" />
+基于 Open Deep Research 的代码研究系统。保留 Supervisor / Researcher 两个循环，所有问题统一经过 Supervisor。源码搜索与读取始终可用；AST 索引、源码版本和历史 RAG 都是可降级的辅助能力。
 
-Deep research has broken out as one of the most popular agent applications. This is a simple, configurable, fully open source deep research agent that works across many model providers, search tools, and MCP servers. It's performance is on par with many popular deep research agents ([see Deep Research Bench leaderboard](https://huggingface.co/spaces/Ayanami0730/DeepResearch-Leaderboard)).
+## 流程
 
-<img width="817" height="666" alt="Screenshot 2025-07-13 at 11 21 12 PM" src="https://github.com/user-attachments/assets/052f2ed3-c664-4a4f-8ec2-074349dcaa3f" />
-
-### 🔥 Recent Updates
-
-**August 14, 2025**: See our free course [here](https://academy.langchain.com/courses/deep-research-with-langgraph) (and course repo [here](https://github.com/langchain-ai/deep_research_from_scratch)) on building open deep research.
-
-**August 7, 2025**: Added GPT-5 and updated the Deep Research Bench evaluation w/ GPT-5 results.
-
-**August 2, 2025**: Achieved #6 ranking on the [Deep Research Bench Leaderboard](https://huggingface.co/spaces/Ayanami0730/DeepResearch-Leaderboard) with an overall score of 0.4344. 
-
-**July 30, 2025**: Read about the evolution from our original implementations to the current version in our [blog post](https://rlancemartin.github.io/2025/07/30/bitter_lesson/).
-
-**July 16, 2025**: Read more in our [blog](https://blog.langchain.com/open-deep-research/) and watch our [video](https://www.youtube.com/watch?v=agGiWUpxkhg) for a quick overview.
-
-### 🚀 Quickstart
-
-1. Clone the repository and activate a virtual environment:
-```bash
-git clone https://github.com/langchain-ai/open_deep_research.git
-cd open_deep_research
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```text
+START → validate_repository → clarify_with_user → write_research_brief
+      → prepare_repository_context → retrieve_research_history
+      → research_supervisor → final_report_generation → save_research_history → END
 ```
 
-2. Install dependencies:
-```bash
-uv sync
-# or
-uv pip install -r pyproject.toml
+路径无效时提示并结束；需要澄清时由 `clarify_with_user` 输出问题并结束本轮。没有索引、版本未知、历史未命中或不可用时，继续进入 Supervisor。
+
+完整设计、工具、数据存储与评测说明见 [当前工作流](docs/code_research_workflow.md)。
+
+## 运行
+
+沿用当前 `.venv`，在 `.env` 中配置模型提供商凭据。命令行会加载 `.env`：
+
+```powershell
+.\.venv\Scripts\python.exe -m open_deep_research.cli.research "历史报告保存流程是如何实现的？" --repository .
 ```
 
-3. Set up your `.env` file to customize the environment variables (for model selection, search tools, and other configuration settings):
-```bash
-cp .env.example .env
+不使用历史模型时可加 `--no-history`；网页工具默认关闭，按需加 `--allow-web`。MCP 按 `mcp_config` 配置装配，不会因代码模式而排除。
+
+AST 索引不要求事先建立。需要静态图查询时手动构建（当前仅 Python，无需 embedding）：
+
+```powershell
+.\.venv\Scripts\python.exe -m open_deep_research.cli.index .
 ```
 
-4. Launch agent with the LangGraph server locally:
+源码变化后重建；旧索引不会继续提供过期关系，研究会回退到目录、搜索和源码读取。
 
-```bash
-# Install dependencies and start the LangGraph server
-uvx --refresh --from "langgraph-cli[inmem]" --with-editable . --python 3.11 langgraph dev --allow-blocking
+AST 和历史对话共用一个 SQLite 文件，默认沿用 `.research-history/history.sqlite3`：
+`repository_snapshots` 表按仓库绝对路径保存 AST 快照，`research_history` 表保存历史问题与报告。
+通过 `RESEARCH_DATABASE` 环境变量、API 的 `research_database` 或两个 CLI 的 `--database` 指定共享路径；
+环境变量优先于 CLI/API。旧 `HISTORY_DATABASE` / `history_database` 仍兼容，但新配置优先。
+现有历史记录直接保留，无需重新生成向量。旧 `.repository-knowledge/*.sqlite3` 不再读取；
+执行上面的 AST 构建命令即可将当前仓库索引写入共享库，旧文件保留。
+原 `--index-dir` / `repository_index_dir` 请改为共享数据库路径配置；自定义路径时两种入口需使用同一文件。
+
+全新环境可用 `uv sync --extra research-history --extra dev`。历史 embedding 使用本地缓存的 `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`，或通过 `HISTORY_EMBEDDING_MODEL` 指向本地模型目录；运行时不自动下载模型，模型不可用时历史检索降级。无需 GPU。
+
+## 项目 Wiki 与知识图谱
+
+Wiki 从 AST 提取模块依赖、调用和继承关系，提供 Markdown 总览、模块页和完整关系 JSON，
+可选择用大模型补充职责解释，并让研究工具按需读取。
+同时读取 `docs/business/` 的本地 Markdown，关联业务要求、计划变更、真实代码和测试，
+生成业务主题页与关系图；模型可对照文档与源码提出待核实的差异。
+
+```powershell
+# 纯静态提取，不调用大模型
+.\.venv\Scripts\python.exe -m open_deep_research.cli.wiki . --no-llm
+# 通过配置的研究模型生成说明，可用 --model 或 WIKI_MODEL 指定模型
+.\.venv\Scripts\python.exe -m open_deep_research.cli.wiki .
 ```
 
-This will open the LangGraph Studio UI in your browser.
+生成会重建 AST，把 Wiki 存入共享库的 `repository_snapshots.data`，不新增库或业务表。
+文件导出到 `.repository-wiki/` 下独立版本目录；源码或业务文档变化后须重新生成。
+模型说明是待核实线索。配置、限制与源码入口见 [Wiki 使用与设计](docs/project_wiki.md)。
 
-```
-- 🚀 API: http://127.0.0.1:2024
-- 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
-- 📚 API Docs: http://127.0.0.1:2024/docs
-```
+本项目的 [Demo 业务背景](docs/business/overview.md)、[研究规则](docs/business/research_rules.md)、
+[历史复用规则](docs/business/history_rules.md) 和 [计划变更](docs/business/change_requests.md)
+是设计资料，不是实现保证。可演示：“历史复用是否符合证据规则？”、“修改结束策略会影响哪里？”、
+“用户隔离在哪些代码和测试中体现？”。
 
-Ask a question in the `messages` input field and click `Submit`. Select different configuration in the "Manage Assistants" tab.
+## LangGraph Studio / API
 
-### ⚙️ Configurations
+`langgraph.json` 仅注册当前主图；保留 `src/security/auth.py` 的部署鉴权。启动已有环境中的开发服务：
 
-#### LLM :brain:
-
-Open Deep Research supports a wide range of LLM providers via the [init_chat_model() API](https://python.langchain.com/docs/how_to/chat_models_universal_init/). It uses LLMs for a few different tasks. See the below model fields in the [configuration.py](https://github.com/langchain-ai/open_deep_research/blob/main/src/open_deep_research/configuration.py) file for more details. This can be accessed via the LangGraph Studio UI. 
-
-- **Summarization** (default: `openai:gpt-4.1-mini`): Summarizes search API results
-- **Research** (default: `openai:gpt-4.1`): Power the search agent
-- **Compression** (default: `openai:gpt-4.1`): Compresses research findings
-- **Final Report Model** (default: `openai:gpt-4.1`): Write the final report
-
-> Note: the selected model will need to support [structured outputs](https://python.langchain.com/docs/integrations/chat/) and [tool calling](https://python.langchain.com/docs/how_to/tool_calling/).
-
-> Note: For OpenRouter: Follow [this guide](https://github.com/langchain-ai/open_deep_research/issues/75#issuecomment-2811472408) and for local models via Ollama  see [setup instructions](https://github.com/langchain-ai/open_deep_research/issues/65#issuecomment-2743586318).
-
-#### Search API :mag:
-
-Open Deep Research supports a wide range of search tools. By default it uses the [Tavily](https://www.tavily.com/) search API. Has full MCP compatibility and work native web search for Anthropic and OpenAI. See the `search_api` and `mcp_config` fields in the [configuration.py](https://github.com/langchain-ai/open_deep_research/blob/main/src/open_deep_research/configuration.py) file for more details. This can be accessed via the LangGraph Studio UI. 
-
-#### Other 
-
-See the fields in the [configuration.py](https://github.com/langchain-ai/open_deep_research/blob/main/src/open_deep_research/configuration.py) for various other settings to customize the behavior of Open Deep Research. 
-
-### 📊 Evaluation
-
-Open Deep Research is configured for evaluation with [Deep Research Bench](https://huggingface.co/spaces/Ayanami0730/DeepResearch-Leaderboard). This benchmark has 100 PhD-level research tasks (50 English, 50 Chinese), crafted by domain experts across 22 fields (e.g., Science & Tech, Business & Finance) to mirror real-world deep-research needs. It has 2 evaluation metrics, but the leaderboard is based on the RACE score. This uses LLM-as-a-judge (Gemini) to evaluate research reports against a golden set of reports compiled by experts across a set of metrics.
-
-#### Usage
-
-> Warning: Running across the 100 examples can cost ~$20-$100 depending on the model selection.
-
-The dataset is available on [LangSmith via this link](https://smith.langchain.com/public/c5e7a6ad-fdba-478c-88e6-3a388459ce8b/d). To kick off evaluation, run the following command:
-
-```bash
-# Run comprehensive evaluation on LangSmith datasets
-python tests/run_evaluate.py
+```powershell
+.\.venv\Scripts\langgraph.exe dev
 ```
 
-This will provide a link to a LangSmith experiment, which will have a name `YOUR_EXPERIMENT_NAME`. Once this is done, extract the results to a JSONL file that can be submitted to the Deep Research Bench.
+调用时配置：
 
-```bash
-python tests/extract_langsmith_data.py --project-name "YOUR_EXPERIMENT_NAME" --model-name "you-model-name" --dataset-name "deep_research_bench"
+```python
+config = {"configurable": {
+    "repository_path": "D:/path/to/repository",
+    "repository_allow_web": False,
+    "history_enabled": True,
+}}
 ```
 
-This creates `tests/expt_results/deep_research_bench_model-name.jsonl` with the required format. Move the generated JSONL file to a local clone of the Deep Research Bench repository and follow their [Quick Start guide](https://github.com/Ayanami0730/deep_research_bench?tab=readme-ov-file#quick-start) for evaluation submission.
+澄清回复应使用同一会话的对话状态。CLI 每次启动是独立调用；需要 CLI 继续研究时，在新问题中写明完整需求与补充条件。
 
-#### Results 
+## 验证
 
-| Name | Commit | Summarization | Research | Compression | Total Cost | Total Tokens | RACE Score | Experiment |
-|------|--------|---------------|----------|-------------|------------|--------------|------------|------------|
-| GPT-5 | [ca3951d](https://github.com/langchain-ai/open_deep_research/pull/168/commits) | openai:gpt-4.1-mini | openai:gpt-5 | openai:gpt-4.1 |  | 204,640,896 | 0.4943 | [Link](https://smith.langchain.com/o/ebbaf2eb-769b-4505-aca2-d11de10372a4/datasets/6e4766ca-613c-4bda-8bde-f64f0422bbf3/compare?selectedSessions=4d5941c8-69ce-4f3d-8b3e-e3c99dfbd4cc&baseline=undefined) |
-| Defaults | [6532a41](https://github.com/langchain-ai/open_deep_research/commit/6532a4176a93cc9bb2102b3d825dcefa560c85d9) | openai:gpt-4.1-mini | openai:gpt-4.1 | openai:gpt-4.1 | $45.98 | 58,015,332 | 0.4309 | [Link](https://smith.langchain.com/o/ebbaf2eb-769b-4505-aca2-d11de10372a4/datasets/6e4766ca-6[…]ons=cf4355d7-6347-47e2-a774-484f290e79bc&baseline=undefined) |
-| Claude Sonnet 4 | [f877ea9](https://github.com/langchain-ai/open_deep_research/pull/163/commits/f877ea93641680879c420ea991e998b47aab9bcc) | openai:gpt-4.1-mini | anthropic:claude-sonnet-4-20250514 | openai:gpt-4.1 | $187.09 | 138,917,050 | 0.4401 | [Link](https://smith.langchain.com/o/ebbaf2eb-769b-4505-aca2-d11de10372a4/datasets/6e4766ca-6[…]ons=04f6002d-6080-4759-bcf5-9a52e57449ea&baseline=undefined) |
-| Deep Research Bench Submission | [c0a160b](https://github.com/langchain-ai/open_deep_research/commit/c0a160b57a9b5ecd4b8217c3811a14d8eff97f72) | openai:gpt-4.1-nano | openai:gpt-4.1 | openai:gpt-4.1 | $87.83 | 207,005,549 | 0.4344 | [Link](https://smith.langchain.com/o/ebbaf2eb-769b-4505-aca2-d11de10372a4/datasets/6e4766ca-6[…]ons=e6647f74-ad2f-4cb9-887e-acb38b5f73c0&baseline=undefined) |
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -p no:cacheprovider
+.\.venv\Scripts\python.exe -m tests.manual.check_local_history
+```
 
-### 🚀 Deployments and Usage
+第一条测试真实图编排、工具与数据库，LLM 使用模拟输出；第二条使用缓存的真实 embedding 模型。它们不代表真实 LLM 的代码理解准确率。
 
-#### LangGraph Studio
+## 目录与阅读顺序
 
-Follow the [quickstart](#-quickstart) to start LangGraph server locally and test the agent out on LangGraph Studio.
+详细文件说明和调用关系见 [代码阅读指南](docs/project_structure.md)。
+整体分层、主图、两层研究循环、退出条件与存储关系见 [完整架构与 LangGraph 编排图](docs/architecture.md)。
 
-#### Hosted deployment
- 
-You can easily deploy to [LangGraph Platform](https://langchain-ai.github.io/langgraph/concepts/#deployment-options). 
+```text
+src/open_deep_research/
+├── configuration.py     # 运行参数与环境变量
+├── cli/                 # 研究、AST 建库命令
+├── workflow/            # 主图、研究循环、状态、提示词、上下文准备
+├── repository/          # 源码读取、搜索、AST 索引
+├── history/             # 历史报告检索、保存、本地 embedding
+├── wiki/                # 知识图谱提取、模型解释、Wiki 导出和读取
+├── storage/             # 一个 SQLite 文件、两张业务表
+└── integrations/        # 工具装配、网页搜索、MCP、模型辅助
+src/security/            # 部署鉴权
+tests/
+├── unit/                # 历史存储与共享数据库测试
+├── integration/         # 完整工作流与工具测试
+└── manual/              # 真实本地 embedding 检查
+```
 
-#### Open Agent Platform
+建议先读 `workflow/graph.py` 末尾的主图连接，再读 `workflow/state.py` 和
+`workflow/context.py`；随后按需要进入源码工具、历史检索和外部集成。
+包顶层的 `deep_researcher.py`、`code_workflow.py`、`repository_knowledge.py`
+只保留旧图入口或命令兼容，业务实现以新目录为准。
 
-Open Agent Platform (OAP) is a UI from which non-technical users can build and configure their own agents. OAP is great for allowing users to configure the Deep Researcher with different MCP tools and search APIs that are best suited to their needs and the problems that they want to solve.
-
-We've deployed Open Deep Research to our public demo instance of OAP. All you need to do is add your API Keys, and you can test out the Deep Researcher for yourself! Try it out [here](https://oap.langchain.com)
-
-You can also deploy your own instance of OAP, and make your own custom agents (like Deep Researcher) available on it to your users.
-1. [Deploy Open Agent Platform](https://docs.oap.langchain.com/quickstart)
-2. [Add Deep Researcher to OAP](https://docs.oap.langchain.com/setup/agents)
-
-### Legacy Implementations 🏛️
-
-The `src/legacy/` folder contains two earlier implementations that provide alternative approaches to automated research. They are less performant than the current implementation, but provide alternative ideas understanding the different approaches to deep research.
-
-#### 1. Workflow Implementation (`legacy/graph.py`)
-- **Plan-and-Execute**: Structured workflow with human-in-the-loop planning
-- **Sequential Processing**: Creates sections one by one with reflection
-- **Interactive Control**: Allows feedback and approval of report plans
-- **Quality Focused**: Emphasizes accuracy through iterative refinement
-
-#### 2. Multi-Agent Implementation (`legacy/multi_agent.py`)  
-- **Supervisor-Researcher Architecture**: Coordinated multi-agent system
-- **Parallel Processing**: Multiple researchers work simultaneously
-- **Speed Optimized**: Faster report generation through concurrency
-- **MCP Support**: Extensive Model Context Protocol integration
+源码位于 `src/open_deep_research/`。旧 legacy 图、三路直答、模块向量检索、旧研究样例和旧基准评测已移除。保留原项目 MIT 许可证和作者信息。

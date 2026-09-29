@@ -1,0 +1,16 @@
+flowchart TD
+  start([START]) --> validate[validate_repository<br/>重置本轮状态、检查项目]
+  validate -.->|无效路径或无可读文件| finish([END])
+  validate -.->|检查通过| clarify[clarify_with_user<br/>按配置判断是否澄清]
+  clarify -.->|需要用户补充| finish
+  clarify -.->|关闭澄清或需求明确| brief[write_research_brief<br/>形成任务、初始化 Supervisor 消息]
+  brief -.-> prepare[prepare_repository_context<br/>检测源码版本、尝试加载 AST]
+  prepare --> retrieve[retrieve_research_history<br/>检索范围内的历史线索]
+  retrieve --> route[route_after_history<br/>检查首条历史得分和版本]
+  route -->|固定边始终存在| supervisor[research_supervisor<br/>Supervisor 编译子图]
+  route -.->|得分至少 0.75 且版本相等：额外动态跳转| report[final_report_generation<br/>复查源码版本、生成报告]
+  supervisor --> report
+  report --> save[save_research_history<br/>按成功标志尝试保存]
+  save --> finish
+  classDef caution fill:#fff0e9,stroke:#c2410c,stroke-width:2px
+  class route caution

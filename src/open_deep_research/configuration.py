@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, List, Optional
 
 from langchain_core.runnables import RunnableConfig
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class SearchAPI(Enum):
@@ -52,7 +52,7 @@ class Configuration(BaseModel):
         }
     )
     allow_clarification: bool = Field(
-        default=True,
+        default=False,
         metadata={
             "x_oap_ui_config": {
                 "type": "boolean",
@@ -62,7 +62,7 @@ class Configuration(BaseModel):
         }
     )
     max_concurrent_research_units: int = Field(
-        default=5,
+        default=2,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
@@ -92,7 +92,7 @@ class Configuration(BaseModel):
         }
     )
     max_researcher_iterations: int = Field(
-        default=6,
+        default=2,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
@@ -105,7 +105,7 @@ class Configuration(BaseModel):
         }
     )
     max_react_tool_calls: int = Field(
-        default=10,
+        default=5,
         metadata={
             "x_oap_ui_config": {
                 "type": "slider",
@@ -210,6 +210,34 @@ class Configuration(BaseModel):
             }
         }
     )
+    # Repository path is required by the code research entry point.
+    repository_path: Optional[str] = Field(default=None)
+    repository_allow_web: bool = Field(default=False)
+
+    # Wiki explanations reuse AST evidence; generation is explicit, reading optional.
+    wiki_enabled: bool = Field(default=True)
+    wiki_business_dir: str = Field(default='docs/business')
+    wiki_max_business_topics: int = Field(default=30, ge=1, le=200)
+    wiki_model: Optional[str] = Field(default=None)
+    wiki_max_modules: int = Field(default=100, ge=1, le=1000)
+    wiki_context_chars: int = Field(default=24000, ge=2000, le=100000)
+    wiki_max_tokens: int = Field(default=3000, ge=256, le=16000)
+    wiki_timeout_seconds: int = Field(default=90, ge=1, le=600)
+
+    # One SQLite file for AST snapshots and completed research.
+    research_database: str = Field(
+        default=".research-history/history.sqlite3",
+        validation_alias=AliasChoices("research_database", "history_database"),
+    )
+
+    # Completed research history (application data, separate from Engramory).
+    history_enabled: bool = Field(default=True)
+    history_namespace: str = Field(default="default")
+    history_embedding_model: str = Field(default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    history_top_k: int = Field(default=3, ge=1, le=10)
+    history_min_score: float = Field(default=0.45, ge=-1, le=1)
+    history_max_context_chars: int = Field(default=6000, ge=200, le=50000)
+
     # MCP server configuration
     mcp_config: Optional[MCPConfig] = Field(
         default=None,
@@ -233,6 +261,11 @@ class Configuration(BaseModel):
     )
 
 
+    @property
+    def history_database(self) -> str:
+        """Compatibility alias; both stores use research_database."""
+        return self.research_database
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
@@ -244,6 +277,8 @@ class Configuration(BaseModel):
             field_name: os.environ.get(field_name.upper(), configurable.get(field_name))
             for field_name in field_names
         }
+        if values.get("research_database") is None:
+            values["research_database"] = os.environ.get("HISTORY_DATABASE", configurable.get("history_database"))
         return cls(**{k: v for k, v in values.items() if v is not None})
 
     class Config:

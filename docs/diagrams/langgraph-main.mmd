@@ -1,0 +1,32 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	validate_repository(validate_repository)
+	clarify_with_user(clarify_with_user)
+	write_research_brief(write_research_brief)
+	prepare_repository_context(prepare_repository_context)
+	retrieve_research_history(retrieve_research_history)
+	route_after_history(route_after_history)
+	research_supervisor(research_supervisor)
+	final_report_generation(final_report_generation)
+	save_research_history(save_research_history)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> validate_repository;
+	clarify_with_user -.-> __end__;
+	clarify_with_user -.-> write_research_brief;
+	final_report_generation --> save_research_history;
+	prepare_repository_context --> retrieve_research_history;
+	research_supervisor --> final_report_generation;
+	retrieve_research_history --> route_after_history;
+	route_after_history --> research_supervisor;
+	validate_repository -.-> __end__;
+	validate_repository -.-> clarify_with_user;
+	write_research_brief -.-> prepare_repository_context;
+	save_research_history --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

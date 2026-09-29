@@ -67,3 +67,15 @@ tmp/
 temp/
 
 .langgraph_api
+
+# Retired local code-index artifacts (ignore leftovers from old checkouts)
+.code-index/
+
+# Application research questions and reports
+.research-history/
+
+# Optional versioned AST index
+.repository-knowledge/
+
+# Generated project Wiki exports (canonical data lives in the shared database)
+.repository-wiki/
